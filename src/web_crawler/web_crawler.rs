@@ -42,8 +42,11 @@ pub fn new_web_crawler(start_url: String) -> WebCrawler {
 impl WebCrawler {
     pub async fn start(&mut self) {
         'outer: while let Some(url) = self.to_visit.pop() {
-            println!("Visiting {}", url);
-            println!("");
+            let visit_message = format!("Visiting {}  ", url);
+            let visit_message_barrier = format!("{}", "-".repeat(visit_message.len()));
+            println!("\n{}", visit_message_barrier);
+            println!("Visiting {} ", url);
+            println!("{}", visit_message_barrier);
 
             let response = self.http_client.get(url.clone()).send().await;
 
