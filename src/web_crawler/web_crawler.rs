@@ -5,10 +5,10 @@ use std::collections::HashSet;
 use super::link_filters::{is_same_domain, is_valid_link, is_wanted_file, is_wanted_locale};
 
 pub struct WebCrawler {
-    pub domain: String,
-    pub http_client: Client,
-    pub visited: HashSet<String>,
-    pub to_visit: Vec<String>,
+    domain: String,
+    http_client: Client,
+    visited: HashSet<String>,
+    to_visit: Vec<String>,
 }
 
 pub fn new_web_crawler(start_url: String) -> WebCrawler {
