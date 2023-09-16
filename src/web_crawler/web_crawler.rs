@@ -2,11 +2,7 @@ use regex::Regex;
 use reqwest::{Client, Url};
 use std::collections::HashSet;
 
-use crate::web_crawler::link_filters;
-
-use super::link_filters::{
-    filter_invalid_links, is_same_domain, is_valid_link, is_wanted_file, is_wanted_locale,
-};
+use super::link_filters::{is_same_domain, is_valid_link, is_wanted_file, is_wanted_locale};
 
 pub struct WebCrawler {
     pub domain: String,
@@ -30,13 +26,15 @@ pub fn new_web_crawler(start_url: String) -> WebCrawler {
 
     // create a new vector to hold the URLs to visit and add the start URL
     let mut to_visit = Vec::new();
+    let mut visited = HashSet::new();
+    visited.insert(start_url.clone());
     to_visit.push(start_url);
 
     // create a new WebCrawler
     return WebCrawler {
         domain: domain.to_string(),
         http_client: Client::new(),
-        visited: HashSet::new(),
+        visited,
         to_visit,
     };
 }
@@ -44,11 +42,6 @@ pub fn new_web_crawler(start_url: String) -> WebCrawler {
 impl WebCrawler {
     pub async fn start(&mut self) {
         while let Some(url) = self.to_visit.pop() {
-            if self.visited.contains(&url) {
-                continue;
-            }
-
-            self.visited.insert(url.clone());
             println!("Visiting {}", url);
             println!("");
 
@@ -100,14 +93,36 @@ impl WebCrawler {
         // combine the links and relative_links
         links.extend(relative_links);
 
-        let filtered_links = links.iter().filter(|link| {
-            is_valid_link(link)
-                && is_wanted_locale(link)
-                && is_same_domain(link, &self.domain)
-                && is_wanted_file(link)
+        // print out any matching links
+        links.iter().for_each(|link| {
+            if (link.contains("greenhouse")) {
+                println!("talloh link: {}", link);
+            }
         });
 
+        let mut filtered_links = links
+            .iter()
+            .filter(|link| {
+                is_valid_link(link)
+                    && is_wanted_locale(link)
+                    && is_same_domain(link, &self.domain)
+                    && is_wanted_file(link)
+            })
+            .map(|link| {
+                let mut url = Url::parse(link).unwrap();
+                url.set_fragment(None);
+                return url.to_string();
+            })
+            .collect::<Vec<String>>();
+
+        filtered_links.sort_by(|a, b| b.cmp(a));
+
         for link in filtered_links {
+            if self.visited.contains(&link) {
+                continue;
+            }
+            self.visited.insert(link.clone());
+            self.to_visit.push(link.to_string());
             println!("Found link: {}", link);
         }
     }

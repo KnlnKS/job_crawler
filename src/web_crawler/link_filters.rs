@@ -347,18 +347,6 @@ static NOT_WANTED_LOCALES: &'static [&'static str] = &[
     "/zu",
 ];
 
-pub fn filter_invalid_links(links: Vec<String>) -> Vec<String> {
-    let mut filtered_links: Vec<String> = Vec::new();
-    for link in links {
-        let parsed_url = Url::parse(&link);
-        if parsed_url.is_err() {
-            continue;
-        }
-        filtered_links.push(link);
-    }
-    return filtered_links;
-}
-
 pub fn is_valid_link(link: &String) -> bool {
     let parsed_url = Url::parse(link);
     return !parsed_url.is_err();
@@ -384,6 +372,6 @@ pub fn is_same_domain(link: &String, domain: &String) -> bool {
 }
 
 pub fn is_wanted_file(link: &String) -> bool {
-    let re_unwanted_files = Regex::new(r#"\.(png|jpg|jpeg|gif|svg|css|map)$"#).unwrap();
+    let re_unwanted_files = Regex::new(r#"\.(webp|xml|webmanifest|svg|css|png|jpg|jpeg|gif|pdf|doc|docx|xls|xlsx|ppt|pptx|zip|rar|tar|gz|7z|exe|dmg|iso|bin|mp3|mp4|wav|ogg|avi|mov|wmv|flv|swf|apk|torrent)(\?|$|\%)"#).unwrap();
     return !re_unwanted_files.is_match(&link);
 }
