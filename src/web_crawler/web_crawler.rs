@@ -41,7 +41,7 @@ pub fn new_web_crawler(start_url: String) -> WebCrawler {
 
 impl WebCrawler {
     pub async fn start(&mut self) {
-        while let Some(url) = self.to_visit.pop() {
+        'outer: while let Some(url) = self.to_visit.pop() {
             println!("Visiting {}", url);
             println!("");
 
@@ -49,6 +49,11 @@ impl WebCrawler {
 
             match response {
                 Ok(response) => {
+                    let status = &response.status();
+                    if !status.is_success() || status.is_redirection() || status.is_server_error() {
+                        continue 'outer;
+                    }
+
                     let body = response.text().await;
                     match body {
                         Ok(body) => {
@@ -84,9 +89,10 @@ impl WebCrawler {
             .captures_iter(&body)
             .map(|capture| {
                 if capture[1].starts_with('/') {
-                    return format!("https://{}{}", host, &capture[1]);
+                    format!("https://{}{}", host, &capture[1])
+                } else {
+                    format!("https://{}/{}", host, &capture[1])
                 }
-                return format!("https://{}/{}", host, &capture[1]);
             })
             .collect::<Vec<String>>();
 
@@ -97,22 +103,30 @@ impl WebCrawler {
         links = links
             .iter()
             .filter(|link| is_valid_link(link) && is_wanted_locale(link) && is_wanted_file(link))
-            .map(|link| link.to_string())
+            // remove / if last char
+            .map(|link| {
+                if link.ends_with('/') {
+                    link[..link.len() - 1].to_string()
+                } else {
+                    link.to_string()
+                }
+            })
             .collect::<Vec<String>>();
 
         // print out any matching links
         links.iter().for_each(|link| {
-            if (link.contains("greenhouse")) {
+            if link.contains("greenhouse") || link.contains("lever") {
                 println!("talloh link: {}", link);
             }
         });
 
-        // Filter out external links and remove url fragments
+        // Filter out external links and remove url fragments and queries
         let mut filtered_links = links
             .iter()
             .filter(|link| is_same_domain(link, &self.domain))
             .map(|link| {
                 let mut url = Url::parse(link).unwrap();
+                url.set_query(None);
                 url.set_fragment(None);
                 return url.to_string();
             })
@@ -125,6 +139,7 @@ impl WebCrawler {
             if self.visited.contains(&link) {
                 continue;
             }
+
             self.visited.insert(link.clone());
             self.to_visit.push(link.to_string());
             println!("Found link: {}", link);
