@@ -64,13 +64,13 @@ impl WebCrawler {
                             let host = parsed_url.host_str().unwrap();
                             self.scrape_page_for_links(body, host);
                         }
-                        Err(err) => {
-                            println!("Error: {}", err);
+                        Err(_) => {
+                            continue 'outer;
                         }
                     }
                 }
-                Err(err) => {
-                    println!("Error: {}", err);
+                Err(_) => {
+                    continue 'outer;
                 }
             };
         }
