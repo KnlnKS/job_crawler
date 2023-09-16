@@ -93,6 +93,13 @@ impl WebCrawler {
         // combine the links and relative_links
         links.extend(relative_links);
 
+        // Filter out invalid links, unwanted locales, and unwanted files
+        links = links
+            .iter()
+            .filter(|link| is_valid_link(link) && is_wanted_locale(link) && is_wanted_file(link))
+            .map(|link| link.to_string())
+            .collect::<Vec<String>>();
+
         // print out any matching links
         links.iter().for_each(|link| {
             if (link.contains("greenhouse")) {
@@ -100,14 +107,10 @@ impl WebCrawler {
             }
         });
 
+        // Filter out external links and remove url fragments
         let mut filtered_links = links
             .iter()
-            .filter(|link| {
-                is_valid_link(link)
-                    && is_wanted_locale(link)
-                    && is_same_domain(link, &self.domain)
-                    && is_wanted_file(link)
-            })
+            .filter(|link| is_same_domain(link, &self.domain))
             .map(|link| {
                 let mut url = Url::parse(link).unwrap();
                 url.set_fragment(None);
@@ -115,6 +118,7 @@ impl WebCrawler {
             })
             .collect::<Vec<String>>();
 
+        // Sort links
         filtered_links.sort_by(|a, b| b.cmp(a));
 
         for link in filtered_links {
