@@ -5,7 +5,9 @@ use std::collections::HashSet;
 
 use super::{
     job_api_extract::extract_job_api,
-    link_filters::{is_same_domain, is_valid_link, is_wanted_file, is_wanted_locale, is_wanted_path},
+    link_filters::{
+        is_same_domain, is_valid_link, is_wanted_file, is_wanted_locale, is_wanted_path,
+    },
 };
 
 pub struct WebCrawler {
@@ -46,11 +48,13 @@ pub fn new_web_crawler(start_url: String) -> WebCrawler {
 impl WebCrawler {
     pub async fn start(&mut self) {
         'outer: while let Some(url) = self.to_visit.pop() {
+            /*
             let visit_message = format!("Visiting {}  ", url);
             let visit_message_barrier = format!("{}", "-".repeat(visit_message.len()));
             println!("\n{}", visit_message_barrier);
             println!("Visiting {} ", url);
             println!("{}", visit_message_barrier);
+            */
 
             let response = self.http_client.get(url.clone()).send().await;
 
@@ -166,7 +170,9 @@ impl WebCrawler {
 
             self.visited.insert(link.clone());
             self.to_visit.push(link.to_string());
+            /*
             println!("Found link: {}", link);
+            */
         }
 
         return None;
