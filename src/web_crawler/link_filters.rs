@@ -347,6 +347,37 @@ static NOT_WANTED_LOCALES: &'static [&'static str] = &[
     "/zu",
 ];
 
+static PATHS_TO_NOT_TREAD: &'static [&'static str] = &[
+    "[",
+    "-",
+    "accessibility",
+    "about",
+    "api",
+    "apps",
+    "asset",
+    "blog",
+    "company",
+    "community",
+    "confirm",
+    "contact",
+    "customer",
+    "doc",
+    "feature",
+    "new",
+    "node_modules",
+    "partner",
+    "product",
+    "resource",
+    "social",
+    "solution",
+    "slug",
+    "team",
+    "template",
+    "testimonial",
+    "undefined",
+    "use",
+];
+
 pub fn is_valid_link(link: &String) -> bool {
     let parsed_url = Url::parse(link);
     return !parsed_url.is_err();
@@ -355,6 +386,16 @@ pub fn is_valid_link(link: &String) -> bool {
 pub fn is_wanted_locale(link: &String) -> bool {
     for locale in NOT_WANTED_LOCALES {
         if link.ends_with(locale) {
+            return false;
+        }
+    }
+    return true;
+}
+
+pub fn is_wanted_path(link: &String) -> bool {
+    for path in PATHS_TO_NOT_TREAD {
+        let url = Url::parse(link).unwrap();
+        if url.path().contains(path) {
             return false;
         }
     }

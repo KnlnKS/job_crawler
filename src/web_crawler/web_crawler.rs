@@ -4,8 +4,8 @@ use reqwest::{Client, Url};
 use std::collections::HashSet;
 
 use super::{
-    job_api_extract::extract_lever,
-    link_filters::{is_same_domain, is_valid_link, is_wanted_file, is_wanted_locale},
+    job_api_extract::extract_job_api,
+    link_filters::{is_same_domain, is_valid_link, is_wanted_file, is_wanted_locale, is_wanted_path},
 };
 
 pub struct WebCrawler {
@@ -118,7 +118,12 @@ impl WebCrawler {
         // Filter out invalid links, unwanted locales, and unwanted files
         links = links
             .par_iter()
-            .filter(|link| is_valid_link(link) && is_wanted_locale(link) && is_wanted_file(link))
+            .filter(|link| {
+                is_valid_link(link)
+                    && is_wanted_locale(link)
+                    && is_wanted_file(link)
+                    && is_wanted_path(link)
+            })
             // remove / if last char
             .map(|link| {
                 if link.ends_with('/') {
@@ -131,14 +136,11 @@ impl WebCrawler {
 
         // print out any matching links
         for link in &links {
-            if link.contains("lever") {
-                let api_link = extract_lever(link.to_string());
-                match api_link {
-                    Some(api_link) => {
-                        return Some(api_link);
-                    }
-                    None => {}
+            match extract_job_api(link.to_string()) {
+                Some(api_link) => {
+                    return Some(api_link);
                 }
+                None => {}
             }
         }
 
