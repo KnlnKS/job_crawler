@@ -2,7 +2,10 @@ use regex::Regex;
 use reqwest::{Client, Url};
 use std::collections::HashSet;
 
-use super::link_filters::{is_same_domain, is_valid_link, is_wanted_file, is_wanted_locale};
+use super::{
+    job_api_extract::extract_lever,
+    link_filters::{is_same_domain, is_valid_link, is_wanted_file, is_wanted_locale},
+};
 
 pub struct WebCrawler {
     domain: String,
@@ -42,11 +45,13 @@ pub fn new_web_crawler(start_url: String) -> WebCrawler {
 impl WebCrawler {
     pub async fn start(&mut self) {
         'outer: while let Some(url) = self.to_visit.pop() {
+            /*
             let visit_message = format!("Visiting {}  ", url);
             let visit_message_barrier = format!("{}", "-".repeat(visit_message.len()));
             println!("\n{}", visit_message_barrier);
             println!("Visiting {} ", url);
             println!("{}", visit_message_barrier);
+            */
 
             let response = self.http_client.get(url.clone()).send().await;
 
@@ -62,7 +67,14 @@ impl WebCrawler {
                         Ok(body) => {
                             let parsed_url = Url::parse(&url).unwrap();
                             let host = parsed_url.host_str().unwrap();
-                            self.scrape_page_for_links(body, host);
+                            let api_link = self.scrape_page_for_links(body, host);
+                            match api_link {
+                                Some(api_link) => {
+                                    println!("Found job api: {}", api_link);
+                                    break 'outer;
+                                }
+                                None => {}
+                            }
                         }
                         Err(_) => {
                             continue 'outer;
@@ -76,7 +88,7 @@ impl WebCrawler {
         }
     }
 
-    fn scrape_page_for_links(&mut self, body: String, host: &str) {
+    fn scrape_page_for_links(&mut self, body: String, host: &str) -> Option<String> {
         // scrape the page for links
         let re_url = Regex::new(r#"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)"#).unwrap();
 
@@ -117,11 +129,17 @@ impl WebCrawler {
             .collect::<Vec<String>>();
 
         // print out any matching links
-        links.iter().for_each(|link| {
-            if link.contains("greenhouse") || link.contains("lever") {
-                println!("talloh link: {}", link);
+        for link in &links {
+            if link.contains("lever") {
+                let api_link = extract_lever(link.to_string());
+                match api_link {
+                    Some(api_link) => {
+                        return Some(api_link);
+                    }
+                    None => {}
+                }
             }
-        });
+        }
 
         // Filter out external links and remove url fragments and queries
         let mut filtered_links = links
@@ -145,7 +163,11 @@ impl WebCrawler {
 
             self.visited.insert(link.clone());
             self.to_visit.push(link.to_string());
+            /*
             println!("Found link: {}", link);
+            */
         }
+
+        return None;
     }
 }
