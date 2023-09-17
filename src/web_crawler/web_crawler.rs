@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use regex::Regex;
 use reqwest::{Client, Url};
 use std::collections::HashSet;
@@ -45,13 +46,11 @@ pub fn new_web_crawler(start_url: String) -> WebCrawler {
 impl WebCrawler {
     pub async fn start(&mut self) {
         'outer: while let Some(url) = self.to_visit.pop() {
-            /*
             let visit_message = format!("Visiting {}  ", url);
             let visit_message_barrier = format!("{}", "-".repeat(visit_message.len()));
             println!("\n{}", visit_message_barrier);
             println!("Visiting {} ", url);
             println!("{}", visit_message_barrier);
-            */
 
             let response = self.http_client.get(url.clone()).send().await;
 
@@ -95,6 +94,7 @@ impl WebCrawler {
         // Turn to vec
         let mut links = re_url
             .captures_iter(&body)
+            .par_bridge()
             .map(|capture| capture[0].to_string())
             .collect::<Vec<String>>();
 
@@ -102,6 +102,7 @@ impl WebCrawler {
         let re_relative_url = Regex::new(r#"["']\/([^>"']+)["']"#).unwrap();
         let relative_links = re_relative_url
             .captures_iter(&body)
+            .par_bridge()
             .map(|capture| {
                 if capture[1].starts_with('/') {
                     format!("https://{}{}", host, &capture[1])
@@ -116,7 +117,7 @@ impl WebCrawler {
 
         // Filter out invalid links, unwanted locales, and unwanted files
         links = links
-            .iter()
+            .par_iter()
             .filter(|link| is_valid_link(link) && is_wanted_locale(link) && is_wanted_file(link))
             // remove / if last char
             .map(|link| {
@@ -143,7 +144,7 @@ impl WebCrawler {
 
         // Filter out external links and remove url fragments and queries
         let mut filtered_links = links
-            .iter()
+            .par_iter()
             .filter(|link| is_same_domain(link, &self.domain))
             .map(|link| {
                 let mut url = Url::parse(link).unwrap();
@@ -154,7 +155,7 @@ impl WebCrawler {
             .collect::<Vec<String>>();
 
         // Sort links
-        filtered_links.sort_by(|a, b| b.cmp(a));
+        filtered_links.par_sort_by(|a, b| b.cmp(a));
 
         for link in filtered_links {
             if self.visited.contains(&link) {
@@ -163,9 +164,7 @@ impl WebCrawler {
 
             self.visited.insert(link.clone());
             self.to_visit.push(link.to_string());
-            /*
             println!("Found link: {}", link);
-            */
         }
 
         return None;
